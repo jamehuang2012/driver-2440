@@ -86,7 +86,8 @@ static ssize_t s3c24xx_keys_read(struct file *filp, char __user *buff,
 	if (count != 1)
 		return -EINVAL;
 	wait_event_interruptible(dev.inq,ev_press);
-	copy_to_user(buff,&key_val,1);
+	if(copy_to_user(buff,&key_val,1))
+		return -EFAULT;
 	ev_press = 0;
 	printk("key_valu = %.X\n", key_val);
 	return 1;
@@ -162,15 +163,32 @@ static int __init s3c24xx_keys_drv_init(void)
 {
 	/* request irq */
 
-	request_irq(IRQ_EINT8,  keys_irq, IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "S1", &key_desc[0]);
-	request_irq(IRQ_EINT11, keys_irq, IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "S2", &key_desc[1]);
-	request_irq(IRQ_EINT13, keys_irq, IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "S3", &key_desc[2]);
-	request_irq(IRQ_EINT14, keys_irq, IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "S4", &key_desc[3]);
+	int ret;
+	ret = 	request_irq(IRQ_EINT8,  keys_irq, IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "S1", &key_desc[0]);
+	if (ret !=0) {
+		printk("ERROR: Cannot request IRQ = %d",IRQ_EINT8);
+		printk("- Code %d, EIO %d, EINVAL %d\n",ret,EIO,EINVAL);
+	}
+	ret = request_irq(IRQ_EINT11, keys_irq, IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "S2", &key_desc[1]);
+	if (ret !=0) {
+		printk("ERROR: Cannot request IRQ = %d",IRQ_EINT11);
+		printk("- Code %d, EIO %d, EINVAL %d\n",ret,EIO,EINVAL);
+	}
+	ret =request_irq(IRQ_EINT13, keys_irq, IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "S3", &key_desc[2]);
+	if (ret !=0) {
+		printk("ERROR: Cannot request IRQ = %d",IRQ_EINT13);
+		printk("- Code %d, EIO %d, EINVAL %d\n",ret,EIO,EINVAL);
+	}
+	ret =request_irq(IRQ_EINT14, keys_irq, IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "S4", &key_desc[3]);
+	if (ret !=0) {
+		printk("ERROR: Cannot request IRQ = %d",IRQ_EINT14);
+		printk("- Code %d, EIO %d, EINVAL %d\n",ret,EIO,EINVAL);
+	}
 
 
 
 	/* remap GPIO */
-  	if (! request_region(0x56000000, 0x400, "leds-drv")) {
+  	if (! request_region(0x56000000, 0x400, "keys-drv")) {
                         printk(KERN_INFO "s3c24xx: can't get I/O port address 0x%x\n",
                                         0x56000000);
                         return -ENODEV;
@@ -189,13 +207,13 @@ static int __init s3c24xx_keys_drv_init(void)
 		return key_major;
 	}
 
-	keys_class = class_create(THIS_MODULE,"leds-drv");
+	keys_class = class_create(THIS_MODULE,"keys-drv");
 	if (IS_ERR(keys_class)) {
 		printk(DEVICE_NAME "class create failure\n");
 		return PTR_ERR(keys_class);
 	}
 	
-	keys_class_dev = device_create(keys_class,NULL,MKDEV(key_major,0),NULL,"leds-drv"); 
+	keys_class_dev = device_create(keys_class,NULL,MKDEV(key_major,0),NULL,"keys-drv"); 
 	if (unlikely(IS_ERR(keys_class_dev))) {
 		return PTR_ERR(keys_class_dev);
 	}	
